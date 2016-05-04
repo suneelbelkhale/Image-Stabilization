@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>C:\opencv-master\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64;C:\opencv-master\build\install\x64\vc12\staticlib;$(LibraryPath)</LibraryPath>
+    <_PropertySheetDisplayName>configOpenCVDebug</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>opencv_core310d.lib;opencv_flann310d.lib;opencv_calib3d310d.lib;opencv_features2d310d.lib;opencv_xfeatures2d310d.lib;opencv_imgproc310d.lib;opencv_imgcodecs310d.lib;opencv_highgui310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_objdetect310d.lib;opencv_photo310d.lib;opencv_stitching310d.lib;opencv_superres310d.lib;opencv_ts310d.lib;cudart.lib;opencv_cudaimgproc310d.lib;opencv_cudaarithm310d.lib;opencv_cudacodec310d.lib;opencv_cudafilters310d.lib;opencv_cudalegacy310d.lib;opencv_cudawarping310d.lib;opencv_cudev310d.lib;opencv_cudaobjdetect310d.lib;opencv_cudabgsegm310d.lib;nppi.lib;npps.lib;nppc.lib;ippicvmt.lib;IlmImfd.lib;libpngd.lib;libjpegd.lib;libjasperd.lib;libwebpd.lib;libprotobufd.lib;libtiffd.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile />
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
