@@ -84,13 +84,16 @@ struct rectE {
 //    }
 //};
 
+static Size fr_s;
+Mat global_prevShown;
+Mat global_curr;
 
 vector<KeyPoint> keypoints_prev;
 Mat descriptors_prev;
 //GpuMat keypoints_prev_GPU;
 //GpuMat descriptors_prev_GPU;
 //static SURF_CUDA surf(1000);
-SURFDetector surf(1000);
+static SURFDetector surf(800);
 
 Mat alg1(Mat curr) {
 
@@ -130,15 +133,15 @@ Mat alg1(Mat curr) {
 		BFMatcher matcher;
 		vector<KeyPoint> keypoints_2;
 		Mat descriptors2;
-		vector<DMatch> matches;
+		vector< vector <DMatch> > matches;
 
 		surf(curr, Mat(), keypoints_2, descriptors2);
 
 		//cout << "SURF: " << GetTickCount() - first << " || ";
 		first = GetTickCount();
 
-		matcher.match(descriptors_prev, descriptors2, matches);
-		//matcher.knnMatch(descriptors_prev, descriptors2, matches, 2);
+		// matcher.match(descriptors_prev, descriptors2, matches);
+		matcher.knnMatch(descriptors_prev, descriptors2, matches, 2);
 
 		//cout << "MATCHER: " << GetTickCount() - first << " || ";
 		//first = GetTickCount();
@@ -183,14 +186,14 @@ Mat alg1(Mat curr) {
 		for (size_t i = 0; i < matches.size(); i++)
 		{
 			//-- Get the keypoints from the good matches
-			Point2f pr = keypoints_prev[matches[i].queryIdx].pt;
-			Point2f cr = keypoints_2[matches[i].trainIdx].pt;
+			Point2f pr = keypoints_prev[matches[i][0].queryIdx].pt;
+			Point2f cr = keypoints_2[matches[i][0].trainIdx].pt;
 			//check hypotenuse length
 			double hypL = sqrt((pr.x - cr.x)*(pr.x - cr.x) + (pr.y - cr.y)*(pr.y - cr.y));
 			if (hypL < 35){
 				prevScene.push_back(pr);
 				currScene.push_back(cr);
-				new_matches.push_back(matches[i]);
+				new_matches.push_back(matches[i][0]);
 			}
 			else{
 				accumHyp += hypL;
@@ -210,7 +213,7 @@ Mat alg1(Mat curr) {
 
 
 		//DRAW
-		//			drawMatches( subPrev, keypoints_1, curr, keypoints_2,
+		//			drawMatches( global_prevShown, keypoints_prev, curr, keypoints_2,
 		//									 new_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
 		//									 vector<char>(), DrawMatchesFlags::DEFAULT  );
 
@@ -292,7 +295,7 @@ Mat alg1(Mat curr) {
 
 		Mat subby = curr(correctedROI).clone();
 
-		//rectangle(curr, correctedROI, Scalar(0, 255, 0), 1);
+		rectangle(curr, correctedROI, Scalar(0, 255, 0), 1);
 
 
 		//cout << "ENDING STUFF: " << GetTickCount() - first << " || ";
@@ -321,9 +324,9 @@ Mat alg1(Mat curr) {
 
 		//cout << ">>>>>> TOTAL ELAPSED TIME ALG 1: " << GetTickCount() - original << endl;
 
-		//			return img_matches;
+		//return img_matches;
 		return subby;
-		//			return curr;
+		//return curr;
 
 	}
 	catch (cv::Exception& e) {
@@ -360,9 +363,6 @@ bool bad_dist(const DMatch &m) {
 
 
 
-Size fr_s;
-Mat prevShown;
-
 
 bool onOrOff;
 bool isRecording;
@@ -372,13 +372,13 @@ bool prevToggleOISButton = false;
 bool prevCaptureButton = false;
 bool progExit = false;
 
-VideoWriter outputVideo;
-VideoCapture vcap;
+static VideoWriter outputVideo;
+static VideoCapture vcap;
 
 //static string outputDir = "/Users/suneelbelkhale1/Documents/code/opencv/OIS/outputs/";
 static string outputDir = "C:\\Users\\vixel\\Desktop\\OxidationImages\\";
-string outputFile;
-string recStat = "OFF";
+static string outputFile;
+static string recStat = "OFF";
 
 void onChangeRecord(){
 
@@ -388,13 +388,24 @@ void onChangeRecord(){
 		std::ostringstream oss;
 		oss << outputDir << "output_vid__" << t->tm_hour << "_" << t->tm_min << "_" << t->tm_sec << ".avi";
 		outputFile = oss.str();
-		outputVideo.open(outputFile, vcap.get(CV_CAP_PROP_FOURCC), vcap.get(CV_CAP_PROP_FPS), fr_s);
+		//vcap.get(CV_CAP_PROP_FOURCC), vcap.get(CV_CAP_PROP_FPS)
+		new (&outputVideo) VideoWriter(outputFile, CV_FOURCC('M','J','P','G'), vcap.get(CV_CAP_PROP_FPS), fr_s);
+		cout << "SIZE: " << fr_s << endl;
 		cout << "Outputting video to: " << outputFile << ", FCC: " << vcap.get(CV_CAP_PROP_FOURCC) << endl;
 	}
 	else{
 		cout << "Releasing video" << endl;
 		outputVideo.release();
 	}
+}
+
+void onChangeOIS(){
+	cout << "FIRST TIME -- cloning this image as basis" << endl;
+	Mat newcurr = global_curr.clone();
+	surf(newcurr, Mat(), keypoints_prev, descriptors_prev);
+	global_prevShown.release();
+	newcurr.copyTo(global_prevShown);
+
 }
 
 void capture(){
@@ -434,6 +445,10 @@ DWORD WINAPI updateKeyboardState(LPVOID lpParam){
 
 		if (input == 's' && !prevToggleOISButton){
 			onOrOff = !onOrOff;
+			//if setting on, redo some stuff
+			if (onOrOff){
+				onChangeOIS();
+			}
 		}
 
 		if (input == 'c' && !prevCaptureButton){
@@ -580,10 +595,7 @@ int main(int argc, char** argv){
 	//		exit(-1);
 	//	}
 
-
-
 	//	imshow("Stabilized", prev);
-
 
 	Mat curr;
 
@@ -592,28 +604,34 @@ int main(int argc, char** argv){
 	//	pthread_t recThread;
 	//	pthread_create(&recThread, NULL, updateRecordingStatus, (void *)2); //run the rec loop checker
 
+
+
+
+	//////*******************LOOP****************//////
+
 	while (vcap.read(curr)){
 		try{
 			long int first = GetTickCount();
 			resize(curr, curr, Size(700, 700 * aspect_ratio));
 			//			cout << "Aspect Ratio: " << curr.cols << ", " << curr.rows << " --- R: " << aspect_ratio <<endl;
 
+			curr.copyTo(global_curr);
 			String stat;
 
-			//		imshow("Stabilized", subby);
+			//OIS
 			Mat s;
 			if (onOrOff){
-				if (!prevStateOnOrOff){ //for the first time
-					cout << "FIRST TIME -- cloning this image as basis" << endl;
-					Mat newcurr = curr.clone();
-					surf(newcurr, Mat(), keypoints_prev, descriptors_prev);
-					//GpuMat old(curr);
-					//creating keypoints as well
-					//surf(old, GpuMat(), keypoints_prev_GPU, descriptors_prev_GPU);
-					//surf.downloadKeypoints(keypoints_prev_GPU, keypoints_prev);
-					//surf.downloadDescriptors(descriptors_prev_GPU, descriptors_prev);
+				// if (!prevStateOnOrOff){ //for the first time
+				// 	cout << "FIRST TIME -- cloning this image as basis" << endl;
+				// 	Mat newcurr = curr.clone();
+				// 	surf(newcurr, Mat(), keypoints_prev, descriptors_prev);
+				// 	//GpuMat old(curr);
+				// 	//creating keypoints as well
+				// 	//surf(old, GpuMat(), keypoints_prev_GPU, descriptors_prev_GPU);
+				// 	//surf.downloadKeypoints(keypoints_prev_GPU, keypoints_prev);
+				// 	//surf.downloadDescriptors(descriptors_prev_GPU, descriptors_prev);
 
-				}
+				// }
 				s = alg1(curr);
 				stat = "ON";
 			}
@@ -625,6 +643,8 @@ int main(int argc, char** argv){
 
 			resize(s, s, curr.size());
 
+
+			//RECORDING
 			if (isRecording && outputVideo.isOpened()){
 				recStat = "REC";
 				outputVideo.write(s);
@@ -632,6 +652,7 @@ int main(int argc, char** argv){
 			}
 			else{
 				recStat = "OFF";
+				outputVideo.release();
 			}
 
 
@@ -647,7 +668,6 @@ int main(int argc, char** argv){
 			fr_s = Size(s.cols, s.rows);
 
 			imshow("Stabilized", s);
-			s.copyTo(prevShown);
 
 			//cout << ">>>>>>>>>>>FULL THANG: " << GetTickCount() - first << endl << endl;
 
