@@ -1,0 +1,26 @@
+﻿Build started 4/30/2016 4:41:09 PM.
+     1>Project "C:\Users\vixel\Documents\workspace\VS_IMSTAB\VS_IMSTAB\VS_IMSTAB.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\ImStabilization64\src\ImageStabilize.cpp
+         ImageStabilize.cpp
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(190): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(196): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(200): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(204): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(209): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(242): warning C4101: 'e' : unreferenced local variable
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(304): warning C4244: 'argument' : conversion from 'double' to 'int', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(331): warning C4101: 'e' : unreferenced local variable
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(412): warning C4244: 'initializing' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(413): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(452): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(491): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\vixel\documents\workspace\imstabilization64\src\imagestabilize.cpp(503): warning C4101: 'e' : unreferenced local variable
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\vixel\Documents\workspace\VS_IMSTAB\Debug\VS_IMSTAB.exe" /INCREMENTAL /NOLOGO opencv_core310d.lib opencv_imgproc310d.lib opencv_imgcodecs310d.lib opencv_highgui310d.lib opencv_videoio310d.lib opencv_video310d.lib opencv_features2d310d.lib opencv_xfeatures2d310d.lib opencv_calib3d310d.lib opencv_flann310d.lib opencv_core310d.lib opencv_calib3d310d.lib opencv_features2d310d.lib opencv_xfeatures2d310d.lib opencv_imgproc310d.lib opencv_imgcodecs310d.lib opencv_highgui310d.lib opencv_video310d.lib opencv_videoio310d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\vixel\Documents\workspace\VS_IMSTAB\Debug\VS_IMSTAB.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\vixel\Documents\workspace\VS_IMSTAB\Debug\VS_IMSTAB.lib" /MACHINE:X64 Debug\ImageStabilize.obj
+     1>Debug\ImageStabilize.obj : fatal error LNK1112: module machine type 'X86' conflicts with target machine type 'x64'
+     1>Done Building Project "C:\Users\vixel\Documents\workspace\VS_IMSTAB\VS_IMSTAB\VS_IMSTAB.vcxproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:01.84

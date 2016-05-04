@@ -1,0 +1,10 @@
+﻿  ImageStabilize.cpp
+..\..\ImStabilization64\src\ImageStabilize.cpp(242): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(382): warning C4244: 'argument' : conversion from 'double' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(409): warning C4101: 'e' : unreferenced local variable
+..\..\ImStabilization64\src\ImageStabilize.cpp(499): warning C4244: 'initializing' : conversion from 'double' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(500): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(540): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(584): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(600): warning C4101: 'e' : unreferenced local variable
+  VS_IMSTAB.vcxproj -> C:\Users\vixel\Documents\workspace\VS_IMSTAB\x64\Debug\VS_IMSTAB.exe

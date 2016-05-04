@@ -1,0 +1,15 @@
+﻿  ImageStabilize.cpp
+..\..\ImStabilization64\src\ImageStabilize.cpp(247): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(387): warning C4244: 'argument' : conversion from 'double' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(414): warning C4101: 'e' : unreferenced local variable
+..\..\ImStabilization64\src\ImageStabilize.cpp(508): warning C4286: 'cv::Exception &' : is caught by base class ('std::exception &') on line 505
+..\..\ImStabilization64\src\ImageStabilize.cpp(517): warning C4244: 'initializing' : conversion from 'double' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(518): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(558): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(604): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+..\..\ImStabilization64\src\ImageStabilize.cpp(505): warning C4101: 'e' : unreferenced local variable
+..\..\ImStabilization64\src\ImageStabilize.cpp(508): warning C4101: 'e' : unreferenced local variable
+..\..\ImStabilization64\src\ImageStabilize.cpp(619): warning C4101: 'e' : unreferenced local variable
+  Generating code
+  Finished generating code
+  VS_IMSTAB.vcxproj -> C:\Users\vixel\Documents\workspace\VS_IMSTAB\x64\Release\VS_IMSTAB.exe
