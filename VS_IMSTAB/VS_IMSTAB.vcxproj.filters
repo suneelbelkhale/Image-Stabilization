@@ -15,12 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\ImStabilization64\src\ImageStabilize.h">
+    <ClInclude Include="ImageStabilize.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ImStabilization64\src\ImageStabilize.cpp">
+    <ClCompile Include="ImageStabilize.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

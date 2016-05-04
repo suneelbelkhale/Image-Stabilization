@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\ImStabilization64\src\ImageStabilize.h" />
+    <ClInclude Include="ImageStabilize.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ImStabilization64\src\ImageStabilize.cpp" />
+    <ClCompile Include="ImageStabilize.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8ED46922-02D3-47D6-95D5-BBDA71DE91A7}</ProjectGuid>
