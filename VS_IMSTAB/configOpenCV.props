@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>C:\opencv-master\build\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64;C:\opencv-master\build\install\x64\vc12\staticlib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64;C:\opencv-master\build\install\x64\vc12\staticlib;C:\opencv-master\tbb44_20160128oss\lib\intel64\vc12;$(LibraryPath)</LibraryPath>
     <_PropertySheetDisplayName>configOpenCVDebug</_PropertySheetDisplayName>
   </PropertyGroup>
   <ItemDefinitionGroup>

@@ -39,6 +39,8 @@ using namespace std;
 using namespace cv::cuda;
 
 
+#define FPS 20.0;
+
 ImageStabilize::ImageStabilize() {
 	// TODO Auto-generated constructor stub
 
@@ -378,7 +380,7 @@ static VideoCapture vcap;
 //static string outputDir = "/Users/suneelbelkhale1/Documents/code/opencv/OIS/outputs/";
 static string outputDir = "C:\\Users\\vixel\\Desktop\\OxidationImages\\";
 static string outputFile;
-static string recStat = "OFF";
+//static string recStat = "OFF";
 
 void onChangeRecord(){
 
@@ -389,7 +391,15 @@ void onChangeRecord(){
 		oss << outputDir << "output_vid__" << t->tm_hour << "_" << t->tm_min << "_" << t->tm_sec << ".avi";
 		outputFile = oss.str();
 		//vcap.get(CV_CAP_PROP_FOURCC), vcap.get(CV_CAP_PROP_FPS)
-		new (&outputVideo) VideoWriter(outputFile, CV_FOURCC('M','J','P','G'), vcap.get(CV_CAP_PROP_FPS), fr_s);
+
+		int fps = vcap.get(CV_CAP_PROP_FPS);
+		int fourcc = CV_FOURCC('M', 'J', 'P', 'G');
+		if (fps < 1){
+			//this means you are reading from a live stream so it doesnt know the frame rate
+			fps = FPS; //fastest it could be, so YOLO
+		}
+
+		new (&outputVideo) VideoWriter(outputFile, fourcc , fps, fr_s);
 		cout << "SIZE: " << fr_s << endl;
 		cout << "Outputting video to: " << outputFile << ", FCC: " << vcap.get(CV_CAP_PROP_FOURCC) << endl;
 	}
@@ -422,9 +432,9 @@ void capture(){
 	compression_params.push_back(100);
 	bool result;
 
-	if (prevShown.empty()){ cout << "Empty prevShown" << endl; }
+	if (global_curr.empty()){ cout << "Empty prevShown" << endl; }
 	try {
-		result = imwrite(outputFile, prevShown, compression_params);
+		result = imwrite(outputFile, global_curr, compression_params);
 	}
 	catch (exception &e){
 
@@ -612,11 +622,12 @@ int main(int argc, char** argv){
 	while (vcap.read(curr)){
 		try{
 			long int first = GetTickCount();
+
 			resize(curr, curr, Size(700, 700 * aspect_ratio));
 			//			cout << "Aspect Ratio: " << curr.cols << ", " << curr.rows << " --- R: " << aspect_ratio <<endl;
 
 			curr.copyTo(global_curr);
-			String stat;
+			String stat, recStat;
 
 			//OIS
 			Mat s;
@@ -644,16 +655,7 @@ int main(int argc, char** argv){
 			resize(s, s, curr.size());
 
 
-			//RECORDING
-			if (isRecording && outputVideo.isOpened()){
-				recStat = "REC";
-				outputVideo.write(s);
-
-			}
-			else{
-				recStat = "OFF";
-				outputVideo.release();
-			}
+			
 
 
 			//		Mat s = alg2(prev, curr);
@@ -671,9 +673,27 @@ int main(int argc, char** argv){
 
 			//cout << ">>>>>>>>>>>FULL THANG: " << GetTickCount() - first << endl << endl;
 
+			
+
+			//while (GetTickCount() - first < 1000 / 1.0){
+			//	cout << "...waiting for frame" << endl;
+			//}
+
+			//RECORDING
+			if (isRecording && outputVideo.isOpened()){
+				recStat = "REC";
+				outputVideo.write(s);
+
+			}
+			else{
+				recStat = "OFF";
+				outputVideo.release();
+			}
+
 
 			if (waitKey(1) >= 0) break;
 			//curr.copyTo(prev);
+
 
 		}
 		catch (cv::Exception& e){
