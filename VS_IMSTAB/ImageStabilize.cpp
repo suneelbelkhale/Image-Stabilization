@@ -40,6 +40,7 @@ using namespace cv::cuda;
 
 
 #define FPS 20.0;
+#define RADIUS 15
 
 ImageStabilize::ImageStabilize() {
 	// TODO Auto-generated constructor stub
@@ -74,6 +75,115 @@ struct rectE {
 	int width;
 };
 
+///FOR IMAGE TRAJECTORY BASED STABILIZATION
+struct Traj {
+
+	double dx;
+	double dy;
+	double da;
+
+	void set(double x, double y, double a){
+		dx = x;
+		dy = y;
+		da = a;
+	}
+};
+
+
+//CALCULATES AN AVERAGE TRAJECTORY BASED ON THE PREVIOUS ELEMENTS
+struct AverageWindow {
+	vector <Traj> dt;
+
+	vector <Traj> loc;
+
+	//based on inputted dx, dy, and dz
+	double x,y,a;
+
+	void push(Traj change){
+		//updating the current stored change in x vals
+		dt.push_back(change);
+		if (dt.size() > 80){
+			dt.erase(dt.begin()); //get rid of first element
+		}
+		dt.shrink_to_fit();
+
+		//updating the current image "location" based on change
+		Traj newX;
+		if (loc.size() > 0){
+			newX.set(loc[loc.size()-1].dx + change.dx, loc[loc.size()-1].dy + change.dy, loc[loc.size()-1].da + change.da);
+		} else{
+			// if this is the first element
+			newX.set(0 + change.dx, 0 + change.dy, 0 + change.da);
+		}
+
+		//push that new x value
+		loc.push_back(newX);
+		if (loc.size() > 80){
+			loc.erase(loc.begin()); //get rid of first element
+		}
+		loc.shrink_to_fit();
+	}
+
+	// void full_sum(vector<Traj> els, Traj* j){
+
+	// 	double sumX = 0, sumY = 0, sumA = 0;
+
+	// 	for (int i = 0 ; i < els.size(); i++){
+	// 		sumX += els[i].dx;
+	// 		sumY += els[i].dy;
+	// 		sumA += els[i].da;
+	// 	}
+
+	// 	j->set(sumX, sumY, sumA);
+	// }
+
+
+	Traj averageWindow(vector <Traj> els, int frames = 5){
+
+		Traj currentTraj; //to be returned
+
+//		cout << "MOTION" << endl;
+		int count = 0;
+		double sumX = 0, sumY = 0, sumA = 0;
+
+		if (els.size() == 0){
+			cout << "1" << endl;
+
+			//returns empty
+			currentTraj.set(0,0,0);
+			return currentTraj;
+		}
+
+		else {
+
+
+//			cout << "2: size: " << t.size() << endl;
+
+			//prevents array bound errors
+			if (els.size() < frames) {
+				frames = els.size();
+			}
+
+			for (int i = 0; i < frames; i++){
+				//accum
+
+//				cout << "-- in loop : " << i << ", until:  " << t.size() - frames << endl;
+
+				sumA += els[els.size() - 1 - i].da; //Angle
+				sumY += els[els.size() - 1 - i].dy; //Y
+				sumX += els[els.size() - 1 - i].dx; //X
+
+				count++;
+			}
+
+			//accumulates the most recent ones
+			currentTraj.set(sumX / count, sumY / count, sumA / count);
+			return currentTraj;
+		}
+
+	}
+
+};
 
 //template<class KPMatcher>
 //struct SURFMatcher
@@ -87,6 +197,7 @@ struct rectE {
 //};
 
 static Size fr_s;
+static AverageWindow accumTraj;
 Mat global_prevShown;
 Mat global_curr;
 
@@ -96,6 +207,150 @@ Mat descriptors_prev;
 //GpuMat descriptors_prev_GPU;
 //static SURF_CUDA surf(1000);
 static SURFDetector surf(800);
+
+
+
+
+
+/**********************************************IMAGE STABILIZATION ALGORITHMS********************************************/
+
+
+
+
+
+/************************ << TRAJECTORY ALGORITHM >> *************************/
+
+
+Mat trajAlgorithm(Mat prev, Mat curr) {
+	Rect roi(Point_<float>(curr.cols * 0.1f, curr.rows * 0.1f), Point_<float>(curr.cols * 0.9f, curr.rows * 0.9f));
+
+	try{
+		BFMatcher matcher;
+		vector<KeyPoint> keypoints_2;
+		Mat descriptors2;
+		vector< vector <DMatch> > matches;
+
+		surf(curr, Mat(), keypoints_2, descriptors2);
+
+		matcher.knnMatch(descriptors_prev, descriptors2, matches, 2);
+
+		vector<Point2f> prevScene;
+		vector<Point2f> currScene;
+		vector< DMatch > new_matches;
+
+		int count = 0;
+		double accumHyp = 0;
+
+		//filtering #####3
+		for (size_t i = 0; i < matches.size(); i++)
+		{
+			//-- Get the keypoints from the good matches
+			Point2f pr = keypoints_prev[matches[i][0].queryIdx].pt;
+			Point2f cr = keypoints_2[matches[i][0].trainIdx].pt;
+			//check hypotenuse length
+			double hypL = sqrt((pr.x - cr.x)*(pr.x - cr.x) + (pr.y - cr.y)*(pr.y - cr.y));
+			if (hypL < 35){
+				prevScene.push_back(pr);
+				currScene.push_back(cr);
+				new_matches.push_back(matches[i][0]);
+			}
+			else{
+				accumHyp += hypL;
+				count++;
+			}
+		}
+
+		//PREV STUFF
+		keypoints_prev = keypoints_2;
+		descriptors_prev.release();
+		descriptors2.copyTo(descriptors_prev);
+
+
+		if (prevScene.size() == 0 || currScene.size() == 0){
+			return curr(roi);
+		};
+
+
+		Mat T = estimateRigidTransform(prevScene, currScene, false);
+
+		if (!T.empty()){
+
+			double dx = T.at<double>(0, 2);
+			double dy = T.at<double>(1, 2);
+			double da = atan2(T.at<double>(1, 0), T.at<double>(0, 0));
+
+
+			//update the lists
+			//adds to the trajectory averaging window
+			Traj currTr;
+			currTr.set(dx,dy,da);
+			accumTraj.push(currTr); //updates everything
+
+			//calculate the smoothed trajectory
+			Traj smoothed_trajectory = accumTraj.averageWindow(accumTraj.loc, RADIUS);
+
+			double diff_x = 0;
+			double diff_y = 0;
+			double diff_a = 0;
+
+			if (accumTraj.loc.size() > 0){ //this will always be true, but jsut in case
+
+				Traj actualTraj = accumTraj.loc[accumTraj.loc.size() - 1];
+
+				//WRITES
+				// raw_traj_file << actualTraj.dx << ", " << actualTraj.dy << endl;
+				// est_traj_file << smoothed_trajectory.dx << ", " << smoothed_trajectory.dy << endl;
+
+				diff_x = smoothed_trajectory.dx - actualTraj.dx;
+				diff_y = smoothed_trajectory.dy - actualTraj.dy;
+				diff_a = smoothed_trajectory.da - actualTraj.da;
+			}
+
+
+			Mat TRANSFORM(2,3,CV_64F);
+			TRANSFORM.at<double>(0,0) = 1;//cos(diff_a);
+			TRANSFORM.at<double>(0,1) = 0;//-sin(diff_a);
+			TRANSFORM.at<double>(1,0) = 0;//sin(diff_a);
+			TRANSFORM.at<double>(1,1) = 1;//cos(diff_a);
+
+			TRANSFORM.at<double>(0,2) = diff_x;
+			TRANSFORM.at<double>(1,2) = diff_y;
+
+			Mat curr2;
+			warpAffine(curr, curr2, TRANSFORM, curr.size());
+
+//			Rect roi2(Point_<float>(roi.x + diff_x / 1.0, roi.y + diff_y / 1.0), Point_<float>(roi.x + roi.width + diff_x / 1.0, roi.y + roi.height + diff_y / 1.0));
+//			rectangle(curr, roi2, Scalar(0, 255, 0), 1);
+
+
+			return curr2(roi);
+
+
+		}
+
+		//IF THERE WAS A MISTRANSFORM
+		else {
+			cout << ">>>>>>>>>>>MISSED TRANSFORM!!!!!!1";
+			return curr(roi);
+		}
+
+
+	}
+	catch (cv::Exception& e) {
+		cout << "\nERROR SOMEWHERE HERE: " << e.msg << endl << endl;
+		return curr(roi);
+	}
+}
+
+
+
+
+
+
+
+
+/************************ << ALGORITHM 1 : BASED ON SOLE IMAGE >> *************************/
+
 
 Mat alg1(Mat curr) {
 
@@ -337,6 +592,12 @@ Mat alg1(Mat curr) {
 	}
 }
 
+
+
+
+/************************ << ALGORITHM 2 >> *************************/
+
+
 Mat alg2(Mat prev, Mat curr){
 	cv::cvtColor(curr, curr, COLOR_BGR2GRAY);
 	//		inRange(curr, Scalar(0), Scalar(100), curr);
@@ -456,9 +717,9 @@ DWORD WINAPI updateKeyboardState(LPVOID lpParam){
 		if (input == 's' && !prevToggleOISButton){
 			onOrOff = !onOrOff;
 			//if setting on, redo some stuff
-			if (onOrOff){
-				onChangeOIS();
-			}
+			// if (onOrOff){
+			// 	onChangeOIS();
+			// }
 		}
 
 		if (input == 'c' && !prevCaptureButton){
@@ -561,6 +822,9 @@ int main(int argc, char** argv){
 	Mat prev;
 	vcap.read(prev);
 
+	//preliminary to avoid errors shhhh
+	surf(prev, Mat(), keypoints_prev, descriptors_prev);
+
 	try {
 		GpuMat gm;
 		gm.upload(prev);
@@ -643,13 +907,16 @@ int main(int argc, char** argv){
 				// 	//surf.downloadDescriptors(descriptors_prev_GPU, descriptors_prev);
 
 				// }
-				s = alg1(curr);
+				// s = alg1(curr);
+				s = trajAlgorithm(prev, curr);
 				stat = "ON";
 			}
 			else{
 				s = curr.clone();
 				stat = "OFF";
 			}
+
+			global_curr.copyTo(prev);
 
 
 			resize(s, s, curr.size());
