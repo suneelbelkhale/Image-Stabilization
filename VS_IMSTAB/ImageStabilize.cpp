@@ -261,8 +261,8 @@ Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
 		for (size_t i = 0; i < matches.size(); i++)
 		{
 			//-- Get the keypoints from the good matches
-			Point2f pr = keypoints_prev[matches[i][0].queryIdx].pt;
-			Point2f cr = keypoints_2[matches[i][0].trainIdx].pt;
+			KeyPoint pr(keypoints_prev[matches[i][0].queryIdx].pt, keypoints_prev[0].size);
+			KeyPoint cr(keypoints_2[matches[i][0].trainIdx].pt, keypoints_2[0].size);
 			//check hypotenuse length
 			double hypL = sqrt((pr.pt.x - cr.pt.x)*(pr.pt.x - cr.pt.x) + (pr.pt.y - cr.pt.y)*(pr.pt.y - cr.pt.y));
 			if (hypL < 8){
@@ -294,7 +294,7 @@ Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
 
 		
 		//kept as a redundancy measure
-		Mat T = estimateRigidTransform(prevScene, currScene, false);
+		Mat T = estimateRigidTransform(prevPoints, currPoints, false);
 
 		//-------------------------OPTICAL FLOW PART-------------------------//
 		vector <Point2f> flowPoints;
@@ -315,7 +315,7 @@ Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
 
 
 		//-------------------------SMOOTHING TRAJECTORY PART-------------------------//
-
+		double dx, dy, da;
 		if (ct > 3 && !T.empty()){ //ct being greater than 3 = more than 3 matching feature sets found, arbitrary but means we have a valid average
 
 			dx = x_accum/ct;
@@ -1091,7 +1091,7 @@ int main(int argc, char** argv){
 
 				// }
 				// s = alg1(curr);
-				s = trajAlgorithm(prev, curr);
+				s = trajAlgorithmOptFlow(prev, curr);
 				stat = "ON";
 			}
 			else{
