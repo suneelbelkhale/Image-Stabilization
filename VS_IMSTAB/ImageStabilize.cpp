@@ -201,6 +201,10 @@ static AverageWindow accumTraj;
 Mat global_prevShown;
 Mat global_curr;
 
+static double prev_diff_x = 0;
+static double prev_diff_y = 0;
+static double prev_diff_a = 0;
+
 vector<KeyPoint> keypoints_prev;
 Mat descriptors_prev;
 //GpuMat keypoints_prev_GPU;
@@ -289,9 +293,9 @@ Mat trajAlgorithm(Mat prev, Mat curr) {
 			//calculate the smoothed trajectory
 			Traj smoothed_trajectory = accumTraj.averageWindow(accumTraj.loc, RADIUS);
 
-			double diff_x = 0;
-			double diff_y = 0;
-			double diff_a = 0;
+			double diff_x = prev_diff_x;
+			double diff_y = prev_diff_y;
+			double diff_a = prev_diff_a;
 
 			if (accumTraj.loc.size() > 0){ //this will always be true, but jsut in case
 
@@ -322,6 +326,11 @@ Mat trajAlgorithm(Mat prev, Mat curr) {
 //			Rect roi2(Point_<float>(roi.x + diff_x / 1.0, roi.y + diff_y / 1.0), Point_<float>(roi.x + roi.width + diff_x / 1.0, roi.y + roi.height + diff_y / 1.0));
 //			rectangle(curr, roi2, Scalar(0, 255, 0), 1);
 
+
+			//x,y,z
+			prev_diff_x = diff_x;
+			prev_diff_y = diff_y;
+			prev_diff_a = diff_a;
 
 			return curr2(roi);
 
