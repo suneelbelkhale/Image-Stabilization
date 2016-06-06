@@ -40,7 +40,14 @@ using namespace cv::cuda;
 
 
 #define FPS 20.0;
-#define RADIUS 15
+#define RADIUS 30
+#define DT_SMOOTH_RADIUS 45
+#define HESSIAN 270.0
+
+static Size gaus_size(3,3);
+static int sig_x = 0;
+
+
 
 ImageStabilize::ImageStabilize() {
 	// TODO Auto-generated constructor stub
@@ -51,7 +58,7 @@ ImageStabilize::~ImageStabilize() {
 	// TODO Auto-generated destructor stub
 }
 
-
+//for allowing easier surf detection bc im lazy
 struct SURFDetector
 {
 	Ptr<Feature2D> surf;
@@ -210,7 +217,7 @@ Mat descriptors_prev;
 //GpuMat keypoints_prev_GPU;
 //GpuMat descriptors_prev_GPU;
 //static SURF_CUDA surf(1000);
-static SURFDetector surf(800);
+static SURFDetector surf(600);
 
 
 
@@ -221,8 +228,175 @@ static SURFDetector surf(800);
 
 
 
+/************************ << BETTER TRAJECTORY ALGORITHM - OPTICAL FLOW>> *************************/
 
-/************************ << TRAJECTORY ALGORITHM >> *************************/
+Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
+	Rect roi(Point_<float>(curr.cols * 0.1f, curr.rows * 0.1f), Point_<float>(curr.cols * 0.9f, curr.rows * 0.9f));
+
+	try{
+		BFMatcher matcher;
+		vector<KeyPoint> keypoints_2;
+		Mat descriptors2;
+		vector< vector <DMatch> > matches;
+
+		surf(curr, Mat(), keypoints_2, descriptors2);
+
+		matcher.knnMatch(descriptors_prev, descriptors2, matches, 2);
+
+		//stores filtered keypoints, these two sets are identical, just in different form
+		vector<KeyPoint> prevKeypts, currKeypts;
+		vector<Point2f> prevPoints, currPoints;
+		vector< DMatch > new_matches;
+
+		//CHECK IF WE GOT NO GOOD KEYPOINTS FROM SURF, which is highly unlikely
+		if (keypoints_prev.size() == 0 || keypoints_2.size() == 0){
+			cout << "EMPTY RAW PTS YO" << endl;
+			return curr(roi);
+		};
+		
+
+		//filtering #####3: based on distance between matches
+		int count = 0;
+		double accumHyp = 0;
+		for (size_t i = 0; i < matches.size(); i++)
+		{
+			//-- Get the keypoints from the good matches
+			Point2f pr = keypoints_prev[matches[i][0].queryIdx].pt;
+			Point2f cr = keypoints_2[matches[i][0].trainIdx].pt;
+			//check hypotenuse length
+			double hypL = sqrt((pr.pt.x - cr.pt.x)*(pr.pt.x - cr.pt.x) + (pr.pt.y - cr.pt.y)*(pr.pt.y - cr.pt.y));
+			if (hypL < 8){
+				//Keypoint array
+				prevKeypts.push_back(pr);
+				currKeypts.push_back(cr);
+				//point array
+				prevPoints.push_back(pr.pt);
+				currPoints.push_back(cr.pt);
+				new_matches.push_back(matches[i][0]);
+			}
+			else{
+				accumHyp += hypL;
+				count++;
+			}
+		}
+
+		//check if we still have stuff after filtering
+		if (prevKeypts.size() == 0 || currKeypts.size() == 0){
+			cout << "EMPTY FILTERED PTS YO" << endl;
+			return curr(roi);
+		};
+
+		//PREV STUFF, muy importante, si si si si si
+		keypoints_prev = keypoints_2;
+		descriptors_prev.release();
+		descriptors2.copyTo(descriptors_prev);
+
+
+		
+		//kept as a redundancy measure
+		Mat T = estimateRigidTransform(prevScene, currScene, false);
+
+		//-------------------------OPTICAL FLOW PART-------------------------//
+		vector <Point2f> flowPoints;
+		vector<uchar> featuresFound;
+		Mat err;
+		calcOpticalFlowPyrLK(prev,curr, prevPoints, flowPoints, featuresFound, err);
+
+		int ct = 0; //in many ways a redundant variable but like YOLO, AMIRITE???
+		double x_accum = 0, y_accum = 0;
+		for (int i = 0; i < prevPoints.size(); i++){
+			if (featuresFound[i]){
+				x_accum += flowPoints[i].x - prevPoints[i].x;
+				y_accum += flowPoints[i].y - prevPoints[i].y;
+				ct++;
+			}
+		}
+		//cout << endl << "Average X: " << x_accum/ct << ", Average Y: " << y_accum/ct << endl << endl;
+
+
+		//-------------------------SMOOTHING TRAJECTORY PART-------------------------//
+
+		if (ct > 3 && !T.empty()){ //ct being greater than 3 = more than 3 matching feature sets found, arbitrary but means we have a valid average
+
+			dx = x_accum/ct;
+			dy = y_accum/ct;
+			da = 0;
+
+
+			//update the lists
+			//adds to the trajectory averaging window
+			Traj currTr;
+			currTr.set(dx,dy,da);
+			accumTraj.push(currTr); //updates everything
+
+			//calculate the smoothed trajectory
+			Traj smoothed_trajectory = accumTraj.averageWindow(accumTraj.loc, DT_SMOOTH_RADIUS);
+
+			double diff_x = prev_diff_x;
+			double diff_y = prev_diff_y;
+			double diff_a = prev_diff_a;
+
+			if (accumTraj.loc.size() > 0){ //this will always be true, but just in case
+
+				Traj actualTraj = accumTraj.loc[accumTraj.loc.size() - 1];
+
+				//WRITES
+				// raw_traj_file << actualTraj.dx << ", " << actualTraj.dy << endl;
+				// est_traj_file << smoothed_trajectory.dx << ", " << smoothed_trajectory.dy << endl;
+
+				diff_x = smoothed_trajectory.dx - actualTraj.dx;
+				diff_y = smoothed_trajectory.dy - actualTraj.dy;
+				diff_a = smoothed_trajectory.da - actualTraj.da;
+			}
+
+
+			Mat TRANSFORM(2,3,CV_64F);
+			TRANSFORM.at<double>(0,0) = 1;//cos(diff_a);
+			TRANSFORM.at<double>(0,1) = 0;//-sin(diff_a);
+			TRANSFORM.at<double>(1,0) = 0;//sin(diff_a);
+			TRANSFORM.at<double>(1,1) = 1;//cos(diff_a);
+
+			TRANSFORM.at<double>(0,2) = diff_x;
+			TRANSFORM.at<double>(1,2) = diff_y;
+
+			Mat curr2;
+			warpAffine(curr, curr2, TRANSFORM, curr.size());
+
+//			Rect roi2(Point_<float>(roi.x + diff_x / 1.0, roi.y + diff_y / 1.0), Point_<float>(roi.x + roi.width + diff_x / 1.0, roi.y + roi.height + diff_y / 1.0));
+//			rectangle(curr, roi2, Scalar(0, 255, 0), 1);
+
+
+			//x,y,z
+			prev_diff_x = diff_x;
+			prev_diff_y = diff_y;
+			prev_diff_a = diff_a;
+
+			return curr2(roi);
+
+
+		}
+
+		//IF THERE WAS A MISTRANSFORM
+		else {
+			cout << ">>>>>>>>>>>MISSED TRANSFORM!!!!!!1";
+			return curr(roi);
+		}
+
+
+	}
+	catch (cv::Exception& e) {
+		cout << "\nERROR SOMEWHERE HERE: " << e.msg << endl << endl;
+		return curr(roi);
+	}
+}
+
+
+
+
+
+
+
+/************************ << TRAJECTORY ALGORITHM - ESTIMATE RIGID TRANSFORM>> *************************/
 
 
 Mat trajAlgorithm(Mat prev, Mat curr) {
