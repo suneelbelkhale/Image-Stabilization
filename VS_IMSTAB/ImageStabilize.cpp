@@ -248,12 +248,19 @@ Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
 		vector<Point2f> prevPoints, currPoints;
 		vector< DMatch > new_matches;
 
+
+		//PREV STUFF, muy importante, si si si si si
+		keypoints_prev = keypoints_2;
+		descriptors_prev.release();
+		descriptors2.copyTo(descriptors_prev);
+
 		//CHECK IF WE GOT NO GOOD KEYPOINTS FROM SURF, which is highly unlikely
 		if (keypoints_prev.size() == 0 || keypoints_2.size() == 0){
 			cout << "EMPTY RAW PTS YO" << endl;
 			return curr(roi);
 		};
 		
+
 
 		//filtering #####3: based on distance between matches
 		int count = 0;
@@ -280,17 +287,12 @@ Mat trajAlgorithmOptFlow(Mat prev, Mat curr) {
 			}
 		}
 
+
 		//check if we still have stuff after filtering
 		if (prevKeypts.size() == 0 || currKeypts.size() == 0){
 			cout << "EMPTY FILTERED PTS YO" << endl;
 			return curr(roi);
 		};
-
-		//PREV STUFF, muy importante, si si si si si
-		keypoints_prev = keypoints_2;
-		descriptors_prev.release();
-		descriptors2.copyTo(descriptors_prev);
-
 
 		
 		//kept as a redundancy measure
